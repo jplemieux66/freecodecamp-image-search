@@ -1,6 +1,8 @@
 const express = require('express');
+const url = require('url'); 
 const MongoClient = require('mongodb').MongoClient;
 const request = require('request');
+const pick = require('lodash.pick');
 
 const mongoUrl = 'mongodb://freecodecamp:freecodecamp2017@ds137220.mlab.com:37220/url-shortener';
 const port = process.env.port || 3000;
@@ -10,8 +12,8 @@ const apiKey = 'AIzaSyAd3vg0X8pQQy-1Uzo0gWFeoubirvhC3eo';
 const app = express();
 
 app.get('/imagesearch/*', async (req, res) => {
-  const searchTerm = decodeURIComponent(req.url.replace('/imagesearch/', ''));
   const offset = req.query.offset;
+  var searchTerm = url.parse(req.url).pathname.replace('/imagesearch/', '');
   var startIndex = 1;
   if (offset) {
     startIndex = offset * 10 - 9;
@@ -25,7 +27,18 @@ app.get('/imagesearch/*', async (req, res) => {
 });
 
 app.get('/latest', async (req, res) => {
+  const db = await MongoClient.connect(mongoUrl);
+  var latestQueries = await db.collection("searchTerms").find().sort({dateOfQuery:-1}).limit(10).toArray();
+  db.close();
+
+  var latestQueriesParsed = latestQueries.map((query) => {
+    return {
+      date: query.dateOfQuery,
+      search_term: query.searchTerm
+    }
+  });
   
+  res.end(JSON.stringify({ latest: latestQueriesParsed }, null, 2));
 });
 
 const getImageResults = (searchTerm, startIndex) => {
@@ -53,10 +66,10 @@ const getImageResults = (searchTerm, startIndex) => {
 
 const logSearchTerm = async (searchTerm) => {
   const db = await MongoClient.connect(mongoUrl);
-  db.collection("searchTerms").insertOne({
+  await db.collection("searchTerms").insertOne({
     dateOfQuery: new Date().getTime(),
     searchTerm
-  }).catch((err) => { throw err; });
+  });
   db.close();
 }
 

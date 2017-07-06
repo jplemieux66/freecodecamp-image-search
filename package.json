@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.15.3",
+    "lodash.pick": "^4.4.0",
     "mongodb": "^2.2.29",
     "request": "^2.81.0"
   }
